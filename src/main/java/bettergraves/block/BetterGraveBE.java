@@ -29,14 +29,13 @@ public class BetterGraveBE extends BlockEntity implements BlockEntityClientSeria
     private GameProfile player = null;
     private boolean restored = false;
 
-    public BetterGraveBE() {
-        super(BetterGraves.BETTER_GRAVE_BE_TYPE);
-
+    public BetterGraveBE(BlockPos pos, BlockState state) {
+        super(BetterGraves.BETTER_GRAVE_BE_TYPE, pos, state);
     }
 
     @Override
-    public void fromTag(BlockState state, CompoundTag tag) {
-        super.fromTag(state, tag);
+    public void readNbt(CompoundTag tag) {
+        super.readNbt(tag);
         if (!tag.contains("Player")) return;
         player = NbtHelper.toGameProfile(tag.getCompound("Player"));
         if (tag.contains("PlayerInventory"))
@@ -55,7 +54,7 @@ public class BetterGraveBE extends BlockEntity implements BlockEntityClientSeria
     }
 
     @Override
-    public CompoundTag toTag(CompoundTag tag) {
+    public CompoundTag writeNbt(CompoundTag tag) {
         if (storedInventory != null) {
             tag.put("PlayerInventory", storedInventory);
             tag.put("Player", NbtHelper.fromGameProfile(new CompoundTag(), player));
@@ -73,7 +72,7 @@ public class BetterGraveBE extends BlockEntity implements BlockEntityClientSeria
             });
             tag.put("CustomInventories", cListTag);
         }
-        return super.toTag(tag);
+        return super.writeNbt(tag);
     }
 
     private static void serializeMap(Map<Integer, ItemStack> map, CompoundTag tag) {
@@ -83,7 +82,7 @@ public class BetterGraveBE extends BlockEntity implements BlockEntityClientSeria
         int i = 0;
         for (int slot : map.keySet()) {
             slots[i] = slot;
-            CompoundTag item = map.get(slot).toTag(new CompoundTag());
+            CompoundTag item = map.get(slot).writeNbt(new CompoundTag());
             items.add(i, item);
             ++i;
         }
@@ -98,7 +97,7 @@ public class BetterGraveBE extends BlockEntity implements BlockEntityClientSeria
 
         ImmutableMap.Builder<Integer, ItemStack> map = ImmutableMap.builder();
         for (int i = 0; i < count; ++i) {
-            ItemStack stack = ItemStack.fromTag(items.getCompound(i));
+            ItemStack stack = ItemStack.fromNbt(items.getCompound(i));
             map.put(slots[i], stack);
         }
         return map.build();
@@ -114,12 +113,14 @@ public class BetterGraveBE extends BlockEntity implements BlockEntityClientSeria
         this.player = NbtHelper.toGameProfile(NbtHelper.fromGameProfile(new CompoundTag(), playerInventory.player.getGameProfile()));
     }
 
+    /* FIXME 1.17 find a way to do this
     @Override
     public void setLocation(World world, BlockPos pos) {
         super.setLocation(world, pos);
         if (!world.isClient)
             sync();
     }
+    */
 
     public void storeInventory(String key, Map<Integer, ItemStack> inventory) {
         ImmutableMap.Builder<Integer, ItemStack> nMap = ImmutableMap.builder();
@@ -130,10 +131,10 @@ public class BetterGraveBE extends BlockEntity implements BlockEntityClientSeria
     public void restoreInventory(ServerPlayerEntity player) {
         BetterGravesAPI.restoreHandlers.forEach((key, handler) -> handler.restoreItems(player, getStoredCustomInventory(key)));
         PlayerInventory old = new PlayerInventory(player);
-        old.clone(player.inventory);
-        player.inventory.deserialize((ListTag)getStoredPlayerInventory());
+        old.clone(player.getInventory());
+        player.getInventory().deserialize((ListTag)getStoredPlayerInventory());
         for (int i = 0; i < old.size(); ++i) {
-            player.inventory.offerOrDrop(player.world, old.getStack(i));
+            player.getInventory().offerOrDrop(old.getStack(i));
         }
         restored = true;
     }

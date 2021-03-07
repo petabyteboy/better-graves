@@ -9,7 +9,9 @@ import bettergraves.compat.TrinketsCompat;
 import com.google.common.collect.ImmutableMap;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -47,7 +49,7 @@ public class BetterGraves implements ModInitializer {
         log(Level.INFO, "Initializing");
         Registry.register(Registry.BLOCK, new Identifier(MOD_ID, "better_grave"), BETTER_GRAVE_BLOCK);
         config = BGConfig.getConfig(FabricLoader.getInstance().getConfigDir());
-        BETTER_GRAVE_BE_TYPE = Registry.register(Registry.BLOCK_ENTITY_TYPE, new Identifier(MOD_ID, "better_grave"), BlockEntityType.Builder.create(BetterGraveBE::new, BETTER_GRAVE_BLOCK).build(null));
+        BETTER_GRAVE_BE_TYPE = Registry.register(Registry.BLOCK_ENTITY_TYPE, new Identifier(MOD_ID, "better_grave"), FabricBlockEntityTypeBuilder.create(BetterGraveBE::new, BETTER_GRAVE_BLOCK).build(null));
         if (FabricLoader.getInstance().isModLoaded("trinkets")) {
             TrinketsCompat.register();
         }
@@ -60,16 +62,17 @@ public class BetterGraves implements ModInitializer {
 
     private static BlockPos gravePos(BlockPos deathLocation, ServerWorld world) {
         BlockPos adjusted = deathLocation;
+
         // clamp the pos to inside the world
-        if (deathLocation.getY() < 0 || deathLocation.getY() > world.getHeight()) {
-            adjusted = new BlockPos(adjusted.getX(), MathHelper.clamp(adjusted.getY(), 0,  world.getDimensionHeight()), adjusted.getZ());
+        if (deathLocation.getY() < world.getBottomY() || deathLocation.getY() > world.getLogicalHeight()) {
+            adjusted = new BlockPos(adjusted.getX(), MathHelper.clamp(adjusted.getY(), 0,  world.getLogicalHeight()), adjusted.getZ());
         }
 
         boolean found = false;
         // if that pos is not air, find the next air above it within the world
         if (!world.getBlockState(adjusted).isAir()) {
 
-            for (int i = 0; i < world.getDimensionHeight() - adjusted.getY(); ++i) {
+            for (int i = world.getBottomY(); i < world.getLogicalHeight() - adjusted.getY(); ++i) {
                 if (world.getBlockState(adjusted.offset(Direction.UP, i)).isAir()) {
                     adjusted = adjusted.offset(Direction.UP, i);
                     found = true;
@@ -90,7 +93,7 @@ public class BetterGraves implements ModInitializer {
 
     public static void placeGrave(BlockPos deathLocation, ServerPlayerEntity player, ServerWorld world, DamageSource deathBlow) {
         // Create an orphaned Grave BlockEntity to store inventory in prior to grave placement
-        BetterGraveBE grave = new BetterGraveBE();
+        BetterGraveBE grave = new BetterGraveBE(deathLocation, BETTER_GRAVE_BLOCK.getDefaultState());
 
         // API : Pre-store handlers - determines whether we should use their logic for graves
         List<String> keys = BetterGravesAPI.preStoreHandlers.entrySet()
@@ -112,7 +115,7 @@ public class BetterGraves implements ModInitializer {
 
         } else {
             BetterGravesAPI.deathHandlers.forEach((key, handler) -> grave.storeInventory(key, handler.handleDeath(player, deathBlow)));
-            grave.storeInventory(player.inventory);
+            grave.storeInventory(player.getInventory());
         }
 
         BlockPos pos = gravePos(deathLocation, world);
@@ -124,7 +127,7 @@ public class BetterGraves implements ModInitializer {
         } else {
             placingGraves.add(pos);
             world.setBlockState(pos, BETTER_GRAVE_BLOCK.getDefaultState());
-            world.setBlockEntity(pos, grave);
+            world.addBlockEntity(grave);
         }
     }
 

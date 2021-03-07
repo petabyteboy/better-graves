@@ -35,7 +35,7 @@ public class TrinketsCompat {
             if (inv.getStack(i).isEmpty()) {
                 inv.setStack(i, stack);
             } else {
-                player.inventory.offerOrDrop(player.world, stack);
+                player.getInventory().offerOrDrop(stack);
             }
         }
     }

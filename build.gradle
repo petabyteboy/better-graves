@@ -20,7 +20,7 @@ repositories {
 		url = "https://maven.abusedmaster.xyz"
 	}
 	maven {
-		url "https://maven.jamieswhiteshirt.com/libs-release/"
+		url "http://maven.jamieswhiteshirt.com/libs-release/"
 	}
 	maven {
 		name = "Cotton"
@@ -43,8 +43,8 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	modImplementation "io.github.prospector:modmenu:${project.modmenu_version}"
-	modImplementation "com.github.emilyploszaj:trinkets:${project.trinkets_version}"
-	modImplementation "com.github.emilyploszaj:bunch-o-trinkets:${project.bunchotrinkets_version}" // No 1.16 dev build
+	modCompileOnly "com.github.emilyploszaj:trinkets:${project.trinkets_version}"
+	modCompileOnly "com.github.emilyploszaj:bunch-o-trinkets:${project.bunchotrinkets_version}" // No 1.16 dev build
 	modImplementation "io.github.cottonmc:Jankson-Fabric:${project.jankson_version}"
 	include "io.github.cottonmc:Jankson-Fabric:${project.jankson_version}"
 }
